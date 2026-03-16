@@ -1,0 +1,39 @@
+services:
+  preel:
+    build: .
+    image: preel
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/gcp/adc.json
+    volumes:
+      - ./out:/app/out:z
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-/dev/null}:/gcp/adc.json:ro,z
+    restart: unless-stopped
+
+  # One-off: render a preview with default props
+  # Usage: docker compose run --rm preview
+  preview:
+    build: .
+    image: preel
+    volumes:
+      - ./out:/app/out:z
+    entrypoint: ["npx", "remotion", "render", "src/index.tsx", "PRReview", "/app/out/preview.mp4"]
+    profiles: ["tools"]
+
+  # One-off: review a specific PR
+  # Usage: docker compose run --rm review owner/repo 42
+  review:
+    build: .
+    image: preel
+    env_file:
+      - .env
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/gcp/adc.json
+    volumes:
+      - ./out:/app/out:z
+      - ~/.config/gcloud/application_default_credentials.json:/gcp/adc.json:ro,z
+    entrypoint: ["npx", "tsx", "src/cli.ts"]
+    profiles: ["tools"]
