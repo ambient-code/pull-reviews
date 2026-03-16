@@ -155,34 +155,39 @@ function getSettleCount(sceneId: string): number {
   return SETTLE_FRAMES[prefix] ?? DEFAULT_SETTLE;
 }
 
-/** Check which diff scenes need scrolling (content overflows viewport) */
-function computeScrollableScenes(props: PRReviewProps): Set<string> {
-  const scrollable = new Set<string>();
+/** Compute how many frames each diff scene needs to be animated (entrance + scroll). */
+function computeScrollSettles(props: PRReviewProps): Record<string, number> {
+  const settles: Record<string, number> = {};
   const LINE_HEIGHT_PX = 30.6;
   const VIEWPORT_HEIGHT = 700;
 
   props.fileReviews.forEach((fr, i) => {
     const totalLines = fr.highlightedHunks.reduce((sum, h) => {
-      // Count Shiki line spans, or fall back to newline count + 1
       const lineSpans = (h.html.match(/class="line"/g) || []).length;
       return sum + (lineSpans > 0 ? lineSpans : (h.html.match(/\n/g) || []).length + 1);
     }, 0);
     const contentHeight = totalLines * LINE_HEIGHT_PX;
-    if (contentHeight > VIEWPORT_HEIGHT) {
-      scrollable.add(`diff-${i}`);
+    const scrollDistance = contentHeight - VIEWPORT_HEIGHT;
+    if (scrollDistance > 0) {
+      const scrollFrames = Math.ceil(scrollDistance / SCROLL_PX_PER_FRAME);
+      // Entrance + scroll + small buffer before switching to static hold
+      settles[`diff-${i}`] = SCROLL_START_FRAME + scrollFrames + 5;
     }
   });
 
-  return scrollable;
+  return settles;
 }
 
-function computeSegments(layout: SceneLayout[], fullyAnimated?: Set<string>): SceneSegment[] {
+function computeSegments(layout: SceneLayout[], scrollSettles?: Record<string, number>): SceneSegment[] {
   const segments: SceneSegment[] = [];
 
   for (const scene of layout) {
     const start = scene.from;
     const end = scene.from + scene.duration - 1;
-    const settle = fullyAnimated?.has(scene.id) ? scene.duration : getSettleCount(scene.id);
+    const scrollSettle = scrollSettles?.[scene.id];
+    const settle = scrollSettle != null
+      ? Math.min(scrollSettle, scene.duration)
+      : getSettleCount(scene.id);
     const holdFrames = scene.duration - settle;
 
     if (holdFrames < MIN_HOLD_FRAMES) {
@@ -331,8 +336,8 @@ export async function renderWithSceneMap(opts: {
 
   // 2. Compute scene layout + segments
   const layout = computeSceneLayout(inputProps);
-  const scrollableScenes = computeScrollableScenes(inputProps);
-  const segments = computeSegments(layout, scrollableScenes);
+  const scrollSettles = computeScrollSettles(inputProps);
+  const segments = computeSegments(layout, scrollSettles);
 
   const animatedSegs = segments.filter((s) => s.type === "animated");
   const staticSegs = segments.filter(
@@ -346,8 +351,9 @@ export async function renderWithSceneMap(opts: {
   const savedFrames = totalFrames - animFrames;
   const savedPct = totalFrames > 0 ? Math.round((savedFrames / totalFrames) * 100) : 0;
 
-  if (scrollableScenes.size > 0) {
-    log("plan", `scrollable diffs: ${[...scrollableScenes].join(", ")} (rendered fully animated)`);
+  const scrollKeys = Object.keys(scrollSettles);
+  if (scrollKeys.length > 0) {
+    log("plan", `scrollable diffs: ${scrollKeys.join(", ")}`);
   }
   log("plan", `${segments.length} segments (${animatedSegs.length} animated, ${staticSegs.length} static), skipping ${savedPct}% of frames`);
 
