@@ -4,26 +4,27 @@ import {
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import {
-  R2_ACCOUNT_ID,
-  R2_ACCESS_KEY_ID,
-  R2_SECRET_ACCESS_KEY,
-  R2_BUCKET,
+  S3_ENDPOINT,
+  S3_REGION,
+  S3_ACCESS_KEY_ID,
+  S3_SECRET_ACCESS_KEY,
+  S3_BUCKET,
   CDN_BASE_URL,
 } from "./config";
 
 let s3Client: S3Client | null = null;
 
 function getS3Client(): S3Client | null {
-  if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+  if (!S3_ACCESS_KEY_ID || !S3_SECRET_ACCESS_KEY) {
     return null;
   }
   if (!s3Client) {
     s3Client = new S3Client({
-      region: "auto",
-      endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      region: S3_REGION,
+      ...(S3_ENDPOINT ? { endpoint: S3_ENDPOINT } : {}),
       credentials: {
-        accessKeyId: R2_ACCESS_KEY_ID,
-        secretAccessKey: R2_SECRET_ACCESS_KEY,
+        accessKeyId: S3_ACCESS_KEY_ID,
+        secretAccessKey: S3_SECRET_ACCESS_KEY,
       },
     });
   }
@@ -38,7 +39,7 @@ export async function uploadVideo(
   const key = `videos/${jobId}.mp4`;
 
   if (!client) {
-    console.warn("R2 not configured, serving video locally");
+    console.warn("S3 not configured, serving video locally");
     return localPath;
   }
 
@@ -46,7 +47,7 @@ export async function uploadVideo(
 
   await client.send(
     new PutObjectCommand({
-      Bucket: R2_BUCKET,
+      Bucket: S3_BUCKET,
       Key: key,
       Body: body,
       ContentType: "video/mp4",

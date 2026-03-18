@@ -78,7 +78,7 @@ function buildCommentBody(videoUrl: string, review: PRReviewData): string {
 
 ${sentimentEmoji} **${review.overallSentiment.charAt(0).toUpperCase() + review.overallSentiment.slice(1)}** — ${review.summary}
 
-https://github.com/user-attachments/assets/${videoUrl}
+${videoUrl}
 
 ${risksSection}
 <details>

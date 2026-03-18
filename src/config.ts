@@ -30,11 +30,14 @@ export const LLM_FAST_MODEL = process.env.LLM_FAST_MODEL || "";
 export const TTS_VOICE = process.env.TTS_VOICE || "onyx";
 export const TTS_SPEED = parseFloat(process.env.TTS_SPEED || "1.1");
 
-// Cloudflare R2
-export const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || "";
-export const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || "";
-export const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || "";
-export const R2_BUCKET = process.env.R2_BUCKET || "preel-videos";
+// S3-compatible storage (Cloudflare R2, AWS S3, etc.)
+// For R2:  S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+// For AWS: omit S3_ENDPOINT, set S3_REGION instead (default: us-east-1)
+export const S3_ENDPOINT = process.env.S3_ENDPOINT || "";
+export const S3_REGION = process.env.S3_REGION || "auto";
+export const S3_ACCESS_KEY_ID = process.env.S3_ACCESS_KEY_ID || "";
+export const S3_SECRET_ACCESS_KEY = process.env.S3_SECRET_ACCESS_KEY || "";
+export const S3_BUCKET = process.env.S3_BUCKET || "preel-videos";
 export const CDN_BASE_URL = process.env.CDN_BASE_URL || "";
 
 // Server

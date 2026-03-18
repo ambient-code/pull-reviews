@@ -381,6 +381,11 @@ async function main() {
 
   console.log(`  Output: ${outputPath}`);
 
+  // Save review data for CI post-processing (upload + comment)
+  const reviewJsonPath = path.join(outputDir, `${jobId}-review.json`);
+  fs.writeFileSync(reviewJsonPath, JSON.stringify(review, null, 2));
+  console.log(`  Review data: ${reviewJsonPath}`);
+
   if (!skipTTS) cleanupTTS(jobId);
 
   const totalElapsed = ((Date.now() - pipelineStart) / 1000).toFixed(1);
