@@ -18,11 +18,24 @@ on:
         required: false
         type: string
         default: "preel-videos"
+      gcp_project_id:
+        description: "GCP project ID for Vertex AI (enables WIF auth, no API keys needed)"
+        required: false
+        type: string
+      gcp_region:
+        description: "GCP region for Vertex AI (default: us-east5)"
+        required: false
+        type: string
+        default: "us-east5"
+      gcp_workload_identity_provider:
+        description: "Full resource name of the WIF provider"
+        required: false
+        type: string
     secrets:
       ANTHROPIC_API_KEY:
         required: false
       OPENAI_API_KEY:
-        required: true
+        required: false
       S3_ENDPOINT:
         required: false
       S3_REGION:
@@ -40,6 +53,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      id-token: write
     steps:
       - name: Checkout preel
         uses: actions/checkout@v4
@@ -64,13 +78,22 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-core
 
+      - name: Authenticate to Google Cloud
+        if: inputs.gcp_project_id != ''
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ inputs.gcp_project_id }}
+          workload_identity_provider: ${{ inputs.gcp_workload_identity_provider }}
+
       - name: Run review
         working-directory: preel
         env:
           GITHUB_TOKEN: ${{ github.token }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          LLM_PROVIDER: ${{ secrets.ANTHROPIC_API_KEY && 'anthropic' || 'openai' }}
+          LLM_PROVIDER: ${{ inputs.gcp_project_id && 'vertex' || secrets.ANTHROPIC_API_KEY && 'anthropic' || 'openai' }}
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ inputs.gcp_project_id }}
+          CLOUD_ML_REGION: ${{ inputs.gcp_region }}
           SKIP_TTS: ${{ inputs.skip_tts && '1' || '0' }}
           REMOTION_CHROME_EXECUTABLE: /usr/bin/chromium-browser
         run: |
