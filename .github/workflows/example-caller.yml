@@ -1,0 +1,18 @@
+# Example: copy this file to .github/workflows/preel.yml in any repo
+# to enable automated video reviews on pull requests.
+
+name: Video Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  preel:
+    uses: ambient-code/pull-reviews/.github/workflows/review.yml@main
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    # with:
+    #   preset: quick
+    #   skip_tts: true

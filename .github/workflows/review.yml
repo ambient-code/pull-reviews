@@ -1,0 +1,72 @@
+name: Preel Video Review
+
+on:
+  workflow_call:
+    inputs:
+      preset:
+        description: "Review preset (default, quick, thorough, security, architecture)"
+        required: false
+        type: string
+        default: "default"
+      skip_tts:
+        description: "Skip TTS narration (silent video)"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: false
+      OPENAI_API_KEY:
+        required: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout preel
+        uses: actions/checkout@v4
+        with:
+          repository: ambient-code/pull-reviews
+          ref: main
+          path: preel
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: preel/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: preel
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-core
+
+      - name: Run review
+        working-directory: preel
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_PROVIDER: ${{ secrets.ANTHROPIC_API_KEY && 'anthropic' || 'openai' }}
+          SKIP_TTS: ${{ inputs.skip_tts && '1' || '0' }}
+          REMOTION_CHROME_EXECUTABLE: /usr/bin/chromium-browser
+        run: |
+          REPO="${{ github.repository }}"
+          PR="${{ github.event.pull_request.number }}"
+          PRESET="${{ inputs.preset }}"
+          npx tsx src/cli.ts "$REPO" "$PR" --preset="$PRESET"
+
+      - name: Upload video artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: preel-review-${{ github.event.pull_request.number }}
+          path: preel/out/*.mp4
+          retention-days: 30
