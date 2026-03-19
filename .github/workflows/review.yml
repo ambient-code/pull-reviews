@@ -76,7 +76,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-core
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-core python3-pip
 
       - name: Authenticate to Google Cloud
         if: inputs.gcp_project_id != ''
@@ -95,6 +95,7 @@ jobs:
           ANTHROPIC_VERTEX_PROJECT_ID: ${{ inputs.gcp_project_id }}
           CLOUD_ML_REGION: ${{ inputs.gcp_region }}
           SKIP_TTS: ${{ inputs.skip_tts && '1' || '0' }}
+          TTS_PROVIDER: ${{ secrets.OPENAI_API_KEY && 'openai' || 'local' }}
           REMOTION_CHROME_EXECUTABLE: /usr/bin/chromium-browser
         run: |
           REPO="${{ github.repository }}"

@@ -5,6 +5,9 @@ import { parseBuffer } from "music-metadata";
 import { OPENAI_API_KEY, OUTPUT_DIR } from "../config";
 import type { NarrationScript, TTSResult } from "../types";
 import type { ResolvedTTSConfig } from "../config/schema";
+import { generateAllNarrationLocal } from "./piper";
+
+const TTS_PROVIDER = process.env.TTS_PROVIDER || (OPENAI_API_KEY ? "openai" : "local");
 
 const TONE_INSTRUCTIONS: Record<string, string> = {
   professional:
@@ -22,6 +25,11 @@ export async function generateAllNarration(
   script: NarrationScript,
   ttsConfig?: ResolvedTTSConfig,
 ): Promise<TTSResult> {
+  if (TTS_PROVIDER === "local") {
+    console.log("Using Kokoro (local) TTS");
+    return generateAllNarrationLocal(jobId, script);
+  }
+
   const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
   const ttsDir = path.join(OUTPUT_DIR, "tts", jobId);
   fs.mkdirSync(ttsDir, { recursive: true });

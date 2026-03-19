@@ -31,12 +31,28 @@ export function generateScript(
     skip_significance: ["low"] as string[],
   };
 
-  // Title scene
+  // Title scene — includes a quick verdict on the PR
   if (showTitleCard) {
     const narrateStats = videoConfig?.narrate_stats ?? false;
-    const titleText = narrateStats
-      ? `Pull request ${ctx.prNumber}: ${ctx.prTitle}, by ${ctx.authorLogin}. ${review.stats.filesChanged} files changed, ${review.stats.totalAdditions} lines added, ${review.stats.totalDeletions} removed.`
-      : `Pull request ${ctx.prNumber}: ${ctx.prTitle}, by ${ctx.authorLogin}.`;
+    let titleText = `Pull request ${ctx.prNumber}: ${ctx.prTitle}, by ${ctx.authorLogin}.`;
+
+    if (narrateStats) {
+      titleText += ` ${review.stats.filesChanged} files changed, ${review.stats.totalAdditions} lines added, ${review.stats.totalDeletions} removed.`;
+    }
+
+    // Add a brief sentiment-based intro
+    const criticalRisks = review.risks.filter((r) => r.severity === "critical").length;
+    const warningRisks = review.risks.filter((r) => r.severity === "warning").length;
+    if (criticalRisks > 0) {
+      titleText += ` Heads up — there are ${criticalRisks} critical issues flagged in this review.`;
+    } else if (warningRisks > 0) {
+      titleText += ` There are a few things worth watching in this change.`;
+    } else if (review.overallSentiment === "positive") {
+      titleText += ` Overall, this looks like a clean change.`;
+    } else {
+      titleText += ` Let's walk through what changed.`;
+    }
+
     scenes.push({
       sceneId: "title",
       narrationText: titleText,
@@ -149,18 +165,32 @@ export function generateScript(
     });
   }
 
-  // Summary — cap to ~2 sentences
+  // Summary — verdict + brief summary
   if (showSummary) {
+    let verdict: string;
+    const criticalRisks = review.risks.filter((r) => r.severity === "critical").length;
+    if (review.overallSentiment === "positive") {
+      verdict = "This PR looks good.";
+    } else if (review.overallSentiment === "neutral") {
+      verdict = "This is a straightforward change.";
+    } else if (review.overallSentiment === "cautious" || criticalRisks > 0) {
+      verdict = "This PR could use additional eyes before merging.";
+    } else {
+      verdict = "This PR needs attention — there are concerns worth discussing.";
+    }
+
     let summaryText = review.summary;
     const sentences = summaryText.match(/[^.!?]+[.!?]+/g) ?? [summaryText];
     if (sentences.length > 2) {
       summaryText = sentences.slice(0, 2).join(" ").trim();
     }
 
+    const fullSummary = `${verdict} ${summaryText}`;
+
     scenes.push({
       sceneId: "summary",
-      narrationText: summaryText,
-      estimatedSeconds: estimateDuration(summaryText),
+      narrationText: fullSummary,
+      estimatedSeconds: estimateDuration(fullSummary),
     });
   }
 
