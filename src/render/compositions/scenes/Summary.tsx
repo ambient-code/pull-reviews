@@ -191,7 +191,7 @@ export const Summary: React.FC<SummaryProps> = ({
             letterSpacing: 2,
           }}
         >
-          PREEL
+          PULL-REVIEWS
         </span>
       </div>
     </AbsoluteFill>

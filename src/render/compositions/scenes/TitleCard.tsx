@@ -203,7 +203,7 @@ export const TitleCard: React.FC<TitleCardProps> = ({
           fontWeight: 600,
         }}
       >
-        PREEL
+        PULL-REVIEWS
       </div>
     </AbsoluteFill>
   );

@@ -7,7 +7,7 @@ export const BUILT_IN_PRESETS: Record<string, PartialPreelConfig> = {
     video: { duration: { min: 15, max: 30 } },
     scenes: {
       file_overview: false,
-      risk_callout: false,
+      risk_callout: true,
       discussion: false,
       diff_walkthrough: { max_files: 3, skip_significance: ["low", "medium"] },
     },

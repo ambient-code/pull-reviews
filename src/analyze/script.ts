@@ -137,14 +137,17 @@ export function generateScript(
     const criticalCount = sorted.filter((r) => r.severity === "critical").length;
     const warningCount = sorted.filter((r) => r.severity === "warning").length;
 
-    // Brief spoken summary instead of reading each risk
+    // Build a single compiled summary of all concerns, prioritizing critical ones
+    const categories = [...new Set(sorted.map((r) => r.category))];
+    const categorySummary = categories.slice(0, 3).join(", ");
+
     let riskText: string;
     if (criticalCount > 0) {
-      riskText = `There are ${review.risks.length} items to watch, including ${criticalCount} critical. ${sorted[0].description.split(/[.!?]/)[0]}.`;
+      riskText = `Heads up — this PR has ${criticalCount} critical concern${criticalCount > 1 ? "s" : ""}, mainly around ${categorySummary}. These should be addressed before merging.`;
     } else if (warningCount > 0) {
-      riskText = `${review.risks.length} things to keep in mind, ${warningCount} worth attention. ${sorted[0].description.split(/[.!?]/)[0]}.`;
+      riskText = `There are ${review.risks.length} callouts on this PR, focused on ${categorySummary}. Worth a closer look before approving.`;
     } else {
-      riskText = `A few minor notes. ${review.risks.length} informational items flagged.`;
+      riskText = `A few minor notes around ${categorySummary}. Nothing blocking but good to be aware of.`;
     }
 
     scenes.push({
