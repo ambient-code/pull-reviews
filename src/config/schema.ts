@@ -175,7 +175,7 @@ export const partialPreelConfigSchema = z.object({
 });
 export type PartialPreelConfig = z.infer<typeof partialPreelConfigSchema>;
 
-/** The full .preel.yml file schema */
+/** The full .pull-reviews.yml file schema */
 export const preelYAMLSchema = z.object({
   preset: z.string().optional(),
   presets: z.record(z.string(), partialPreelConfigSchema).optional(),

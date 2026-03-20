@@ -1,21 +1,21 @@
 # Pull Reviews - AI Powered Video Review
 
-Automated video reviews for GitHub pull requests. Preel analyzes your PR diffs with AI, generates narrated walkthrough scripts, renders short videos with syntax-highlighted code, and posts them back as PR comments.
+Automated video reviews for GitHub pull requests. Pull Reviews analyzes your PR diffs with AI, generates narrated walkthrough scripts, renders short videos with syntax-highlighted code, and posts them back as PR comments.
 
 ## How it works
 
 ```
-Webhook → Fetch diff → AI analysis → Narration script → TTS → Syntax highlighting → Video render → Upload → PR comment
+PR event → Fetch diff → AI analysis → Narration script → TTS → Syntax highlighting → Video render → Upload → PR comment
 ```
 
-1. A GitHub webhook fires when a PR is opened or updated
-2. Preel fetches the diff and resolves configuration (presets, auto-detection, per-PR overrides)
-3. An LLM (OpenAI or Anthropic) analyzes the diff for purpose, risks, and significance
+1. A PR is opened or updated (via GitHub Actions or webhook)
+2. Pull Reviews fetches the diff and resolves configuration (presets, auto-detection, per-PR overrides)
+3. An LLM (OpenAI, Anthropic, or Claude on Vertex AI) analyzes the diff for purpose, risks, and significance
 4. A narration script is generated with time-budgeted scenes
-5. OpenAI TTS generates MP3 audio for each scene in parallel
+5. TTS generates MP3 audio for each scene (OpenAI or Kokoro local)
 6. Shiki syntax-highlights the diff hunks with green/red line coloring
 7. Remotion renders a 1920x1080 H.264 video at 30fps
-8. The video uploads to Cloudflare R2
+8. The video uploads to S3-compatible storage (Cloudflare R2, AWS S3, etc.)
 9. A comment with the video and review summary is posted (or updated) on the PR
 
 ## Video scenes
@@ -32,17 +32,41 @@ All scenes are individually toggleable via configuration.
 
 ## Quick start
 
-### Prerequisites
+### GitHub Actions (recommended)
 
-- Docker (rendering requires Chromium + ffmpeg)
-- GitHub personal access token (for CLI) or GitHub App credentials (for webhook)
-- OpenAI API key (for LLM analysis and TTS)
+Copy this workflow to `.github/workflows/pull-reviews.yml` in any repo:
+
+```yaml
+name: Video Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  review:
+    uses: ambient-code/pull-reviews/.github/workflows/review.yml@main
+    with:
+      s3_bucket: pull-reviews
+    secrets:
+      S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+      S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+      S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+      CDN_BASE_URL: ${{ secrets.CDN_BASE_URL }}
+```
+
+No API keys needed for analysis when using Vertex AI with Workload Identity Federation. TTS falls back to Kokoro (free, local) when no OpenAI key is provided.
 
 ### CLI usage (test against a real PR)
 
 ```bash
 cp .env.example .env
-# Fill in GITHUB_TOKEN and OPENAI_API_KEY
+# Fill in GITHUB_TOKEN
 
 # Build the Docker image
 npm run docker:build
@@ -73,13 +97,13 @@ Opens Remotion Studio for previewing compositions with default props. Requires C
 
 ## Configuration
 
-Preel is deeply configurable through multiple layers:
+Pull Reviews is deeply configurable through multiple layers:
 
 1. **Environment variables** — base settings
-2. **`.preel.yml`** in your repo — per-repo defaults
+2. **`.pull-reviews.yml`** in your repo — per-repo defaults
 3. **Built-in presets** — `quick`, `thorough`, `security`, `architecture`, `onboarding`
 4. **Auto-detection** — from branch names, commit prefixes, file patterns, labels
-5. **PR body overrides** — `<!-- preel ... -->` YAML blocks
+5. **PR body overrides** — `<!-- pull-reviews ... -->` YAML blocks
 
 See [docs/configuration.md](docs/configuration.md) for the full reference.
 
@@ -89,7 +113,7 @@ See [docs/configuration.md](docs/configuration.md) for the full reference.
 |----------|-------------|
 | [Configuration](docs/configuration.md) | Full config reference — presets, YAML, env vars, auto-detection |
 | [Architecture](docs/architecture.md) | System design, pipeline flow, data model |
-| [Deployment](docs/deployment.md) | Docker setup, GitHub App, R2 storage, production checklist |
+| [Deployment](docs/deployment.md) | Docker setup, GitHub App, S3 storage, production checklist |
 | [Scenes & Video](docs/scenes.md) | Video composition structure, scene details, styling |
 | [CLI Reference](docs/cli.md) | Local testing commands and options |
 | [LLM Analysis](docs/analysis.md) | How AI review works — prompts, providers, output format |
@@ -100,13 +124,14 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `OPENAI_API_KEY` | Yes | Powers LLM analysis and TTS |
 | `GITHUB_TOKEN` | CLI only | Personal access token for CLI testing |
 | `GITHUB_APP_ID` | Server | GitHub App ID |
 | `GITHUB_PRIVATE_KEY` | Server | GitHub App private key (PEM or base64) |
 | `GITHUB_WEBHOOK_SECRET` | Server | Webhook signature verification |
-| `LLM_PROVIDER` | No | `openai` (default) or `anthropic` |
-| `R2_BUCKET` | No | Cloudflare R2 bucket (falls back to local) |
+| `LLM_PROVIDER` | No | `openai`, `anthropic`, or `vertex` |
+| `TTS_PROVIDER` | No | `openai` or `local` (Kokoro, default when no OpenAI key) |
+| `S3_ENDPOINT` | No | Custom S3 endpoint (required for R2) |
+| `S3_BUCKET` | No | S3 bucket name (default: preel-videos) |
 
 ## Scripts
 

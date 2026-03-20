@@ -55,38 +55,40 @@ function parseEnvOverrides(): PartialPreelConfig {
   return config;
 }
 
-/** Fetch .preel.yml from the repo via GitHub Contents API */
+/** Fetch .pull-reviews.yml (or .preel.yml fallback) from the repo via GitHub Contents API */
 async function fetchRepoConfig(
   octokit: Octokit,
   owner: string,
   repo: string,
   ref: string,
 ): Promise<PreelYAMLConfig | null> {
-  try {
-    const { data } = await octokit.repos.getContent({
-      owner,
-      repo,
-      path: ".preel.yml",
-      ref,
-    });
+  for (const configPath of [".pull-reviews.yml", ".preel.yml"]) {
+    try {
+      const { data } = await octokit.repos.getContent({
+        owner,
+        repo,
+        path: configPath,
+        ref,
+      });
 
-    if ("content" in data && data.content) {
-      const content = Buffer.from(data.content, "base64").toString("utf-8");
-      const raw = parseYAML(content);
-      if (!raw || typeof raw !== "object") return null;
+      if ("content" in data && data.content) {
+        const content = Buffer.from(data.content, "base64").toString("utf-8");
+        const raw = parseYAML(content);
+        if (!raw || typeof raw !== "object") return null;
 
-      const result = preelYAMLSchema.safeParse(raw);
-      if (!result.success) {
-        console.warn("Invalid .preel.yml:", result.error.message);
-        return null;
+        const result = preelYAMLSchema.safeParse(raw);
+        if (!result.success) {
+          console.warn(`Invalid ${configPath}:`, result.error.message);
+          return null;
+        }
+        return result.data;
       }
-      return result.data;
+    } catch (err: any) {
+      if (err.status !== 404) {
+        console.warn(`Failed to fetch ${configPath}:`, err.message);
+      }
+      // 404 = try next config file name
     }
-  } catch (err: any) {
-    if (err.status !== 404) {
-      console.warn("Failed to fetch .preel.yml:", err.message);
-    }
-    // 404 = no config file, that's fine
   }
   return null;
 }
