@@ -1,4 +1,4 @@
-# Preel
+# Pull Reviews - AI Powered Video Review
 
 Automated video reviews for GitHub pull requests. Preel analyzes your PR diffs with AI, generates narrated walkthrough scripts, renders short videos with syntax-highlighted code, and posts them back as PR comments.
 
