@@ -23,10 +23,10 @@ on:
         required: false
         type: string
       gcp_region:
-        description: "GCP region for Vertex AI (default: us-east5)"
+        description: "GCP region for Vertex AI (default: global)"
         required: false
         type: string
-        default: "us-east5"
+        default: "global"
       gcp_workload_identity_provider:
         description: "Full resource name of the WIF provider"
         required: false

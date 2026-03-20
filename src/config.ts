@@ -19,8 +19,8 @@ export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-2
 // Anthropic on Vertex AI (used for analysis when LLM_PROVIDER=vertex)
 // Uses Google Cloud ADC — run `gcloud auth application-default login` or set GOOGLE_APPLICATION_CREDENTIALS
 export const VERTEX_PROJECT = process.env.ANTHROPIC_VERTEX_PROJECT_ID || process.env.VERTEX_PROJECT || "";
-export const VERTEX_LOCATION = process.env.CLOUD_ML_REGION || process.env.VERTEX_LOCATION || "us-east5";
-export const VERTEX_MODEL = process.env.VERTEX_MODEL || "claude-sonnet-4-20250514";
+export const VERTEX_LOCATION = process.env.CLOUD_ML_REGION || process.env.VERTEX_LOCATION || "global";
+export const VERTEX_MODEL = process.env.VERTEX_MODEL || "claude-haiku-4-5@20251001";
 
 // Fast model — used for parallel file review batches (cheaper/faster model)
 // Defaults to the main model if not set
