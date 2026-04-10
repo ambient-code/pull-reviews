@@ -1,60 +1,36 @@
-import fs from "node:fs";
-import {
-  S3Client,
-  PutObjectCommand,
-} from "@aws-sdk/client-s3";
-import {
-  S3_ENDPOINT,
-  S3_REGION,
-  S3_ACCESS_KEY_ID,
-  S3_SECRET_ACCESS_KEY,
-  S3_BUCKET,
-  CDN_BASE_URL,
-} from "./config";
+import { Storage } from "@google-cloud/storage";
+import { GCS_BUCKET } from "./config";
 
-let s3Client: S3Client | null = null;
+let storage: Storage | null = null;
 
-function getS3Client(): S3Client | null {
-  if (!S3_ACCESS_KEY_ID || !S3_SECRET_ACCESS_KEY) {
+function getStorage(): Storage | null {
+  if (!GCS_BUCKET) {
     return null;
   }
-  if (!s3Client) {
-    s3Client = new S3Client({
-      region: S3_REGION,
-      ...(S3_ENDPOINT ? { endpoint: S3_ENDPOINT } : {}),
-      credentials: {
-        accessKeyId: S3_ACCESS_KEY_ID,
-        secretAccessKey: S3_SECRET_ACCESS_KEY,
-      },
-    });
+  if (!storage) {
+    storage = new Storage();
   }
-  return s3Client;
+  return storage;
 }
 
 export async function uploadVideo(
   jobId: string,
   localPath: string,
 ): Promise<string> {
-  const client = getS3Client();
+  const client = getStorage();
   const key = `videos/${jobId}.mp4`;
 
   if (!client) {
-    console.warn("S3 not configured, serving video locally");
+    console.warn("GCS not configured, serving video locally");
     return localPath;
   }
 
-  const body = fs.readFileSync(localPath);
+  await client.bucket(GCS_BUCKET).upload(localPath, {
+    destination: key,
+    contentType: "video/mp4",
+  });
 
-  await client.send(
-    new PutObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: key,
-      Body: body,
-      ContentType: "video/mp4",
-    }),
-  );
-
-  const url = CDN_BASE_URL ? `${CDN_BASE_URL}/${key}` : key;
+  const url = `https://storage.googleapis.com/${GCS_BUCKET}/${key}`;
   console.log(`Uploaded video: ${url}`);
   return url;
 }

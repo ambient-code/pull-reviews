@@ -1,17 +1,12 @@
 /**
- * CI post-render step: upload video to R2 and post PR comment.
+ * CI post-render step: upload video to GCS and post PR comment.
  *
  * Usage (called by GitHub Actions, not directly):
  *   npx tsx src/ci-post.ts <owner/repo> <pr-number> <video-path> <review-json-path>
  *
  * Env vars:
- *   GITHUB_TOKEN        — required (from actions)
- *   S3_ACCESS_KEY_ID    — required
- *   S3_SECRET_ACCESS_KEY — required
- *   S3_ENDPOINT         — optional (required for R2, omit for AWS S3)
- *   S3_REGION           — optional (default: auto)
- *   S3_BUCKET           — optional (default: preel-videos)
- *   CDN_BASE_URL        — required (public URL prefix for bucket)
+ *   GITHUB_TOKEN — required (from actions)
+ *   GCS_BUCKET   — required (GCS bucket name, ADC handles auth)
  */
 
 import fs from "node:fs";
@@ -52,11 +47,11 @@ async function main() {
 
   const jobId = `ci-${owner}-${repo}-${prNumber}-${Date.now()}`;
 
-  console.log("Uploading video to R2...");
+  console.log("Uploading video to GCS...");
   const videoUrl = await uploadVideo(jobId, videoPath);
 
   if (videoUrl === videoPath) {
-    console.error("R2 upload failed — R2 credentials not configured");
+    console.error("GCS upload failed — GCS_BUCKET not configured");
     process.exit(1);
   }
 

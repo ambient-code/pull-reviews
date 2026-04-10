@@ -13,11 +13,10 @@ on:
         required: false
         type: boolean
         default: false
-      s3_bucket:
-        description: "S3 bucket name (default: preel-videos)"
-        required: false
+      gcs_bucket:
+        description: "GCS bucket name for video uploads"
+        required: true
         type: string
-        default: "preel-videos"
       gcp_project_id:
         description: "GCP project ID for Vertex AI (enables WIF auth, no API keys needed)"
         required: false
@@ -36,16 +35,6 @@ on:
         required: false
       OPENAI_API_KEY:
         required: false
-      S3_ENDPOINT:
-        required: false
-      S3_REGION:
-        required: false
-      S3_ACCESS_KEY_ID:
-        required: true
-      S3_SECRET_ACCESS_KEY:
-        required: true
-      CDN_BASE_URL:
-        required: true
 
 jobs:
   review:
@@ -103,16 +92,11 @@ jobs:
           PRESET="${{ inputs.preset }}"
           npx tsx src/cli.ts "$REPO" "$PR" --preset="$PRESET"
 
-      - name: Upload to S3 and comment on PR
+      - name: Upload to GCS and comment on PR
         working-directory: preel
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
-          S3_REGION: ${{ secrets.S3_REGION }}
-          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
-          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
-          S3_BUCKET: ${{ inputs.s3_bucket }}
-          CDN_BASE_URL: ${{ secrets.CDN_BASE_URL }}
+          GCS_BUCKET: ${{ inputs.gcs_bucket }}
         run: |
           REPO="${{ github.repository }}"
           PR="${{ github.event.pull_request.number }}"
